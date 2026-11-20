@@ -32,6 +32,7 @@ Each component has `POST /v1/<operation>` accepting its JSON request object. Res
 | `polynomials` | Exact Sturm root counting and independently verifiable rational real-root intervals. |
 | `sketch` | Frequent-Directions matrix summaries, state restoration and approximate merges. |
 | `fourier` | Native radix-2 FFT, bounded small direct DFT fallback and inverse transforms. |
+| `groupstats` | Exact mergeable grouped descriptive statistics: count, weight sum, effective sample size, mean and variance with explicit invalid-value and weighted-variance denominator conventions. |
 
 ## Request examples
 
@@ -42,11 +43,13 @@ Run `python -m roundstable.examples` to print valid JSON requests. The output is
 curl -s http://127.0.0.1:8080/capabilities
 ```
 
-Use one operation request from that output as the JSON body for its `/v1/<operation>` endpoint. The `demo` command executes all five operations and prints their computed results.
+Use one operation request from that output as the JSON body for its `/v1/<operation>` endpoint. The `demo` command executes all six operations and prints their computed results.
 
 ## Supported scope
 
 Exact accumulation favors correctness over high-throughput vector performance and final zero is positive. Interval outputs may be intentionally conservative; division by an interval containing zero is rejected. Root results count distinct real roots, do not report multiplicity, and use bounded degree/work. Matrix summaries are approximate and not bitwise invariant under merge-tree changes. FFT lengths are at most 4096; non-power-of-two fallback is limited to 64.
+
+Grouped statistics keep exact rational sums per group, so results are identical under any partitioning, merge order or state restoration, and no finite observation is ever dropped for stability. Requests fix the missing/non-finite policy (`reject` or `skip`) and the variance denominator (`population` divides by the weight sum, `sample` by the reliability-weight analogue of `n - 1`); results echo these conventions and keep the reason whenever a statistic is undefined. Zero weights never add effective samples, a single effective observation leaves the sample variance undefined, and states bound the number of distinct groups (default 4096) and reject incompatible versions or conventions. Final float conversion may saturate to `+-inf`; the exact state is unaffected.
 
 Runtime state uses explicit temporary directories or caller-provided library objects. Service examples are per-request computations; use the library interfaces for persistent state and long-lived readers.
 
